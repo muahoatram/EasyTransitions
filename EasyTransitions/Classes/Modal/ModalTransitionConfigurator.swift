@@ -11,6 +11,7 @@ import UIKit
 internal final class ModalTransitionConfigurator: NSObject, UIViewControllerAnimatedTransitioning {
 
     private let transitionAnimator: ModalTransitionAnimator
+    private var implicitlyAnimating: UIViewImplicitlyAnimating?
 
     public init(transitionAnimator: ModalTransitionAnimator) {
         self.transitionAnimator = transitionAnimator
@@ -21,7 +22,7 @@ internal final class ModalTransitionConfigurator: NSObject, UIViewControllerAnim
     }
     
     public func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
-        transitionAnimator(using: transitionContext).startAnimation()
+        interruptibleAnimator(using: transitionContext).startAnimation()
     }
     
      private func transitionAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
@@ -52,6 +53,7 @@ internal final class ModalTransitionConfigurator: NSObject, UIViewControllerAnim
         animator.addCompletion { position in
             switch position {
             case .end:
+                self.implicitlyAnimating = nil
                 transitionContext.completeTransition(!transitionContext.transitionWasCancelled)
                 if isPresenting {
                     self.transitionAnimator.onPresented?()
@@ -71,6 +73,11 @@ internal final class ModalTransitionConfigurator: NSObject, UIViewControllerAnim
     }
     
     public func interruptibleAnimator(using transitionContext: UIViewControllerContextTransitioning) -> UIViewImplicitlyAnimating {
-        return transitionAnimator(using: transitionContext)
+        if let implicitlyAnimating = implicitlyAnimating {
+            return implicitlyAnimating
+        }
+        
+        implicitlyAnimating = transitionAnimator(using: transitionContext)
+        return implicitlyAnimating!
     }
 }
